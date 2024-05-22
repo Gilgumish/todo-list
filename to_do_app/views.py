@@ -1,10 +1,11 @@
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
-from to_do_app.forms import CustomUserCreationForm
+from to_do_app.forms import CustomUserCreationForm, TaskForm
 from to_do_app.models import Task
 
 
@@ -41,9 +42,55 @@ def logout_view(request):
     return redirect("to_do_app:home")
 
 
+@login_required
 def home(request):
-    if not request.user.is_authenticated:
-        return redirect('to_do_app:login')
+    tasks = Task.objects.filter(user=request.user).order_by('deadline')
+    now = timezone.now()
+    return render(request, "to-do-app/home.html", {'tasks': tasks, 'now': now})
 
-    tasks = Task.objects.filter(user=request.user).order_by('-deadline')
-    return render(request, "to-do-app/home.html", {'tasks': tasks})
+
+@login_required
+def add_task(request):
+    if request.method == "POST":
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.user = request.user
+            task.save()
+            form.save_m2m()
+            return redirect("to_do_app:home")
+    else:
+        form = TaskForm()
+    return render(request, "to-do-app/task_form.html", {'form': form})
+
+
+@login_required
+def edit_task(request, pk):
+    task = get_object_or_404(Task, pk=pk, user=request.user)
+    if request.method == "POST":
+        form = TaskForm(request.POST, instance=task)
+        if form.is_valid():
+            form.save()
+            return redirect("to_do_app:home")
+    else:
+        form = TaskForm(instance=task)
+    return render(request, "to-do-app/task_form.html", {'form': form})
+
+
+@login_required
+def delete_task(request, pk):
+    task = get_object_or_404(Task, pk=pk, user=request.user)
+    if request.method == "POST":
+        task.delete()
+        return redirect("to_do_app:home")
+    return render(request, 'to-do-app/task_confirm_delete.html', {'task': task})
+
+
+@login_required
+def toggle_task(request, pk):
+    task = get_object_or_404(Task, pk=pk, user=request.user)
+    task.is_done = not task.is_done
+    task.save()
+    return redirect("to_do_app:home")
+
+

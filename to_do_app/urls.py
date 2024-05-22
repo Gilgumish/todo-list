@@ -1,7 +1,6 @@
-from django.contrib import admin
 from django.urls import path
 
-from to_do_app.views import home, register, login_view, logout_view
+from to_do_app.views import home, register, login_view, logout_view, add_task, edit_task, delete_task, toggle_task
 
 app_name = "to_do_app"
 
@@ -10,5 +9,9 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
+    path('task/add/', add_task, name='add_task'),
+    path('task/<int:pk>/edit/', edit_task, name='edit_task'),
+    path('task/<int:pk>/delete/', delete_task, name='delete_task'),
+    path('task/<int:pk>/toggle/', toggle_task, name='toggle_task'),
 
 ]
