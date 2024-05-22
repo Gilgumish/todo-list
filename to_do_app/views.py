@@ -1,6 +1,7 @@
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Case, When
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
@@ -44,9 +45,18 @@ def logout_view(request):
 
 @login_required
 def home(request):
-    tasks = Task.objects.filter(user=request.user).order_by('deadline')
+    sort_by = request.GET.get('sort_by', 'created_at')
+    if sort_by == 'status':
+        tasks = Task.objects.filter(user=request.user).annotate(
+            status_order=Case(
+                When(is_done=True, then=0),
+                When(is_done=False, then=1),
+            )
+        ).order_by('status_order', '-created_at')
+    else:
+        tasks = Task.objects.filter(user=request.user).order_by(sort_by)
     now = timezone.now()
-    return render(request, "to-do-app/home.html", {'tasks': tasks, 'now': now})
+    return render(request, "to-do-app/home.html", {'tasks': tasks, 'now': now, 'sort_by': sort_by})
 
 
 @login_required
