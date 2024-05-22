@@ -5,8 +5,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 
-from to_do_app.forms import CustomUserCreationForm, TaskForm
-from to_do_app.models import Task
+from to_do_app.forms import CustomUserCreationForm, TaskForm, TagForm
+from to_do_app.models import Task, Tag
 
 
 def register(request):
@@ -94,3 +94,41 @@ def toggle_task(request, pk):
     return redirect("to_do_app:home")
 
 
+@login_required
+def tag_list(request):
+    tags = Tag.objects.all()
+    return render(request, "to-do-app/tag_list.html", {'tags': tags})
+
+
+@login_required
+def add_tag(request):
+    if request.method == "POST":
+        form = TagForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("to_do_app:tag_list")
+    else:
+        form = TagForm()
+    return render(request, "to-do-app/tag_form.html", {'form': form})
+
+
+@login_required
+def edit_tag(request, pk):
+    tag = get_object_or_404(Tag, pk=pk)
+    if request.method == "POST":
+        form = TagForm(request.POST, instance=tag)
+        if form.is_valid():
+            form.save()
+            return redirect("to_do_app:tag_list")
+    else:
+        form = TagForm(instance=tag)
+    return render(request, "to-do-app/tag_form.html", {'form': form})
+
+
+@login_required
+def delete_tag(request, pk):
+    tag = get_object_or_404(Tag, pk=pk)
+    if request.method == "POST":
+        tag.delete()
+        return redirect("to_do_app:tag_list")
+    return render(request, "to-do-app/tag_confirm_delete.html", {'tag': tag})
